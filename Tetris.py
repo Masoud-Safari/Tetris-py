@@ -57,6 +57,7 @@ class Tetris:
         # create window, canvas and labels
 
         self.win = tk.Tk()
+        self.win.title("Tetris")
         self.win.configure(bg=self.win_color)
         self.win.geometry(str(self.can_w + self.pad * 4 + self.block_size * 8) + 'x' +
                           str(self.can_h + self.pad * 2 + 8))
