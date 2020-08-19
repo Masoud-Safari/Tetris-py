@@ -4,8 +4,15 @@ import time
 
 
 class Tetris:
+    """ Tetris Game! """
+
     def __init__(self):
-        self.block_size = 30
+        """
+        Initializes window, canvas, and labels.
+        Generates empty game board
+        """
+
+        self.block_size = 30  # size of one block in canvas
         self.pad = 15
 
         self.win_color = '#4773b5'
@@ -15,8 +22,12 @@ class Tetris:
 
         self.te = [0] * 7  # 7 tetromino
         self.create_te(self.te)
+
+        # free block = 0, occupied block = 1
         self.ground = np.ones([21, 16], dtype=int)
-        self.ground[0:18, 3:13] = 0
+        self.ground[0:18, 3:13] = 0  # all border numbers are one for detecting collision
+
+        # color = block number
         self.color = np.zeros([21, 16], dtype=int)
 
         self.refresh_rate = 0.04  # seconds
@@ -25,17 +36,25 @@ class Tetris:
         self.last_status = 'game_over'
         self.counter = 0
         self.current_piece = None
-        self.n = 7
+
+        # n and next_n are the number of tetromino
+        self.n = 7  # 7 means no active piece on the ground
         self.next_n = np.random.randint(7)
         self.next_piece = np.copy(np.rot90(self.te[self.next_n], np.random.randint(4)))
-        self.row = 0
-        self.full_line = np.array([0], dtype=int)
 
-        self.px = 0  # te position (x)
-        self.py = 0  # te position (y)
+        self.row = 0  # sum of each row
+        self.full_line = np.array([0], dtype=int)  # list of full lines
 
+        # the position of the falling piece
+        self.px = 0
+        self.py = 0
+
+        # canvas size
         self.can_h = self.block_size * 18
         self.can_w = self.block_size * 10
+
+        # ********************************
+        # create window, canvas and labels
 
         self.win = tk.Tk()
         self.win.configure(bg=self.win_color)
@@ -55,8 +74,10 @@ class Tetris:
 
         self.pause_label = tk.Label(self.win, text='Game Paused\nPress Enter to continue', font='Verdana 15')
 
+        # x_temp and y_temp determine the position for labels
         x_temp = 400
         y_temp = 20
+
         self.score = tk.IntVar()
         self.score.set(0)
         self.score_label_text = tk.Label(self.win, text='Score:', font='Verdana 15', bg='#4773b5', width=10)
@@ -89,6 +110,7 @@ class Tetris:
 
         try:
             while True:
+                # all game logic happen in this loop
                 self.game_logic()
 
                 self.win.update()
@@ -98,6 +120,17 @@ class Tetris:
             pass
 
     def game_logic(self):
+        """
+        Decides game next status based on current situation.
+        There are 4 different status:
+            game_over
+            descend: a piece is descending
+            new_piece: a new piece should be generated
+            mark_line: there are full lines that should be eliminated
+
+        :return: None
+        """
+
         if self.status != 'game_over':
             if self.status == 'descend':
                 if self.tick():
@@ -111,6 +144,12 @@ class Tetris:
                     self.del_line()
 
     def tick(self):
+        """
+        Every self.game_speed times returns True
+
+        :return: True if self.game_speed iterations passed, otherwise returns False.
+        """
+
         self.counter = self.counter + 1
         if self.counter >= self.game_speed:
             self.counter = 0
@@ -119,6 +158,12 @@ class Tetris:
             return False
 
     def new_game(self):
+        """
+        Resets the game parameter for new game.
+
+        :return: None
+        """
+
         self.ground[0:18, 3:13] = 0
         self.color = self.color * 0
 
@@ -135,16 +180,27 @@ class Tetris:
         self.level.set(1)
         self.line.set(0)
 
-        self.px = 0  # te position (x)
-        self.py = 0  # te position (y)
+        self.px = 0
+        self.py = 0
 
         self.draw()
 
     def check_line(self):
+        """
+        Checks if there is a full line.
+        If there is a full line, change the color to white,
+        and sets the status to mark_line for elimination.
+
+        :return: None
+        """
+
         self.row = np.sum(self.ground[0:18, 3:13], 1)
         self.full_line = np.where(self.row == 10)
+
+        # if there is a full line
         if len(self.full_line[0]) != 0:
             for i in range(len(self.full_line[0])):
+                # 7 is the number of white in self.te_color list
                 self.color[self.full_line[0][i], 3:13] = 7
 
             self.draw()
@@ -153,6 +209,13 @@ class Tetris:
             self.status = 'new_piece'
 
     def del_line(self):
+        """
+        Eliminates the marked lines, and updates the score accordingly.
+
+        :return: None
+        """
+
+        # n_line is the number of full lines
         n_line = len(self.full_line[0])
         for i in range(n_line):
             self.ground[1:self.full_line[0][i] + 1, 3:13] = self.ground[0:self.full_line[0][i], 3:13]
@@ -170,6 +233,12 @@ class Tetris:
         self.status = 'new_piece'
 
     def descend(self):
+        """
+        Moves the piece one block down if possible, otherwise fix that piece.
+
+        :return: None
+        """
+
         if not self.collision(1, 0, 0):
             self.px = self.px + 1  # descend
             self.draw()
@@ -180,6 +249,12 @@ class Tetris:
             self.check_line()
 
     def instant_descent(self):
+        """
+        Moves the current piece down to the lowest possible block instantly.
+
+        :return: None
+        """
+
         dx = 0
         while not self.collision(dx, 0, 0):
             dx = dx + 1
@@ -194,8 +269,20 @@ class Tetris:
         self.check_line()
 
     def key_action(self, event):
+        """
+        Decides what to do based on the pressed key.
+            enter: start new game or pause
+            left and right: moves the piece left and right
+            up and down: rotate piece counter clockwise and clockwise
+            space: descend the piece to the lowest possible block instantly
+
+        :param event: key event
+        :return: None
+        """
+
         k = event.keysym
 
+        # new game
         if self.status == 'game_over':
             if k == 'Return':
                 self.go_label.place_forget()
@@ -204,12 +291,14 @@ class Tetris:
                 self.new_piece()
                 self.status = 'descend'
 
+        # paused game (in the middle of the game)
         elif self.status == 'pause':
             if k == 'Return':
                 self.status = self.last_status
                 self.pause_label.place_forget()
                 self.draw()
 
+        # during the game
         else:
             if k == 'Left':
                 if not self.collision(0, -1, 0):
@@ -243,12 +332,32 @@ class Tetris:
                 self.pause_label.place(x=45, y=(self.pad + 5 * self.block_size))
 
     def collision(self, dx, dy, rot):
-        x, y = self.current_piece.shape
+        """
+        Checks if the collision will happen in the given position and rotation.
+
+        Since the occupied blocks on the ground determined by 1 if the maximum number
+        of sum of the ground matrix and piece matrix is 2, it means there is a collision.
+
+        :param dx: x of new position
+        :param dy: y of new position
+        :param rot: rot * 90 degree rotation (rot should be 0, 1, 2 or 3)
+        :return: if the collision happens return True, otherwise return False
+        """
+
+        x, y = self.current_piece.shape  # size of the piece matrix
 
         return np.max(self.ground[self.px + dx:self.px + x + dx, self.py + dy:self.py + y + dy] +
                       np.rot90(self.current_piece, rot)) == 2
 
     def new_piece(self):
+        """
+        Replaces the current piece with next piece and generates the new piece
+        and put that in the next piece place. Then checks the collision. If
+        the collision happens, it means the ground was full and the will finish.
+
+        :return: None
+        """
+
         self.current_piece = self.next_piece
         self.n = self.next_n
         self.next_n = np.random.randint(7)
@@ -265,6 +374,14 @@ class Tetris:
             self.status = 'descend'
 
     def put_piece(self):
+        """
+        Fixes the current piece.
+
+        Places the current piece matrix on the ground matrix.
+
+        :return: None
+        """
+
         x, y = self.current_piece.shape
         px = self.px
         py = self.py
@@ -272,9 +389,15 @@ class Tetris:
         self.ground[px:px + x, py:py + y][self.current_piece == 1] = self.current_piece[self.current_piece == 1]
         self.color[px:px + x, py:py + y][self.current_piece == 1] = self.n * self.current_piece[self.current_piece == 1]
 
-        self.n = 7
+        self.n = 7  # 7 means no active piece on the ground
 
     def draw(self):
+        """
+        Draws the main canvas, active piece and next piece canvas.
+
+        :return: None
+        """
+
         bd = 3
         self.can.delete('all')
         self.next_can.delete('all')
@@ -285,6 +408,7 @@ class Tetris:
                     self.can.create_rectangle((j - 3) * d + bd, i * d + bd, (j - 2) * d + bd, (i + 1) * d + bd,
                                               fill=self.te_color[self.color[i, j]], width=2, outline=self.border_color)
 
+        # if there is an active piece
         if self.n != 7:
             x, y = self.current_piece.shape
             px = self.px
@@ -306,23 +430,30 @@ class Tetris:
                     self.next_can.create_rectangle((j + px) * d, (i + py) * d, (j + px + 1) * d, (i + py + 1) * d,
                                                    fill=self.te_color[self.next_n], width=2, outline=self.border_color)
 
-    def update_score(self, e):
-        if e == 'one':
+    def update_score(self, e: str):
+        """
+        Updates the score and level and game speed.
+
+        :param str e: tells the function which kind of score should consider.
+        :return: None
+        """
+
+        if e == 'one':  # a piece fixed
             self.score.set(self.score.get() + 25)
-            pass
-        elif e == '1_line':
+
+        elif e == '1_line':  # one line eliminated
             self.score.set(self.score.get() + 100)
             self.line.set(self.line.get() + 1)
-            pass
-        elif e == '2_line':
+
+        elif e == '2_line':  # two lines eliminated
             self.score.set(self.score.get() + 200)
             self.line.set(self.line.get() + 2)
-            pass
-        elif e == '3_line':
+
+        elif e == '3_line':  # three lines eliminated
             self.score.set(self.score.get() + 400)
             self.line.set(self.line.get() + 3)
-            pass
-        elif e == '4_line':
+
+        elif e == '4_line':  # four lines eliminated
             self.score.set(self.score.get() + 800)
             self.line.set(self.line.get() + 4)
 
@@ -331,6 +462,13 @@ class Tetris:
 
     @staticmethod
     def create_te(t):
+        """
+        Generates 7 tetromino
+
+        :param t: an empty list with 7 elements
+        :return: None
+        """
+
         t[0] = np.zeros([4, 4])
         t[0][:, 1] = 1
 
