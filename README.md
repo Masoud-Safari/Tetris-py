@@ -5,7 +5,7 @@ Tetris implementation in python using tkinter and numpy! :smirk:
 
 **Note:** you should install tkinter and numpy before using this code
 
-### How to play:
+### How to play: :video_game:
 **Enter:** start a new game or pause the game  
 **Left and Right:** moves the piece left and right  
 **Up and Down:** rotates the piece counter clockwise and clockwise  
